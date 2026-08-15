@@ -7,3 +7,5 @@ test-results/
 .playwright-cache/
 .impeccable/
 results/.progress.json
+
+.vercel
