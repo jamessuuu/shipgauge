@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>shipgauge — machine profile probe</title></head>
+<body>
+<!--
+  A deliberately inert page served over http://127.0.0.1 (a secure context)
+  for the machine-profile GPU adapter readback in scripts/measure.mjs.
+  navigator.gpu is NOT reliably exposed on about:blank (observed empirically
+  on this machine/Chromium 151: about:blank -> navigator.gpu undefined,
+  http://127.0.0.1/... -> navigator.gpu available), so profiling must happen
+  on a real served page, not about:blank.
+-->
+<p>shipgauge machine-profile probe page (no script runs here on purpose).</p>
+</body>
+</html>

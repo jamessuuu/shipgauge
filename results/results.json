@@ -1,0 +1,974 @@
+{
+  "study": "shipgauge — browser-ML shippability study",
+  "generatedAt": "2026-08-15T05:26:07.273Z",
+  "n": 20,
+  "machineProfile": {
+    "gpu": {
+      "available": true,
+      "vendor": "amd",
+      "architecture": "rdna-4",
+      "device": "0x7590",
+      "description": "AMD Radeon RX 9060 XT"
+    },
+    "ramGB": 31.1,
+    "os": "win32 10.0.26200",
+    "cpuModel": "AMD Ryzen 7 9700X 8-Core Processor             ",
+    "cpuCount": 16,
+    "browserVersion": "Chromium 151.0.7922.34",
+    "measuredAt": "2026-08-15T05:19:57.618Z"
+  },
+  "methodNotes": [
+    "n = number of (model, device) rows measured on ONE machine, ONE run. This is a method demonstration, not a population claim — see README \"Limits\" before generalizing any number here.",
+    "coldTotalTransferBytes is the sum of CDP Network.loadingFinished encodedDataLength across every non-cached request during first load in a fresh incognito context (transformers.js runtime + WASM binary + tokenizer/config files + model weights). It is the same figure Chrome DevTools' Network panel calls \"Transferred\", not the decoded/decompressed size.",
+    "warmTotalTransferBytes measures a second load in the SAME browser context (same disk/memory cache) — this is what \"does it re-download on revisit\" actually tests.",
+    "webgpu rows ran in headed Chromium (--enable-unsafe-webgpu); wasm rows ran headless. Every row records its own browserMode.",
+    "provider.actualProvider is derived from a real runtime signal (GPUQueue.submit() call count, captured by monkey-patching the WebGPU API before transformers.js loads), never from the device string we requested — see scripts/lib/provider-readback.mjs.",
+    "peakJsHeapBytes is read via CDP Performance.getMetrics (JSHeapUsedSize), not the privacy-quantized performance.memory API.",
+    "Observed on this machine: navigator.gpu is not available in headless Chromium at all (gpuAdapterAvailable=false on every wasm/headless row), even though the same binary exposes a working WebGPU adapter when headed. This is exactly why webgpu rows are never run headless in this harness — it is also independent, first-party confirmation of the \"WebGPU in headless is unreliable\" premise this study started from.",
+    "GPUAdapterInfo.device and .description are redacted to empty strings by Chromium unless launched with --enable-webgpu-developer-features (vendor/architecture are exposed either way) — the machineProfile above was captured with that flag."
+  ],
+  "rows": [
+    {
+      "modelId": "minilm-l6",
+      "repo": "Xenova/all-MiniLM-L6-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 6220,
+        "warmLoadToFirstInferenceMs": 285
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 28110306,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "26.81 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912420,
+          "model-cdn": 23188079,
+          "other": 0
+        },
+        "advertisedBytes": 90390000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 90.39MB — the figure most blog posts/READMEs casually cite for \"the MiniLM-L6 embedding model\", even though transformers.js ships the quantized file (onnx/model_quantized.onnx = 22.97MB) by default.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -62279694,
+          "deltaPercent": -68.90108861599734,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 28100499,
+          "savingsRatio": 0.9996511243954441
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7400804,
+        "peakJsHeapHuman": "7.06 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "The single most-cited transformers.js example model (used in the official README and most tutorials)."
+    },
+    {
+      "modelId": "minilm-l6",
+      "repo": "Xenova/all-MiniLM-L6-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 6648,
+        "warmLoadToFirstInferenceMs": 933
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 28110171,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "26.81 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912420,
+          "model-cdn": 23187944,
+          "other": 0
+        },
+        "advertisedBytes": 90390000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 90.39MB — the figure most blog posts/READMEs casually cite for \"the MiniLM-L6 embedding model\", even though transformers.js ships the quantized file (onnx/model_quantized.onnx = 22.97MB) by default.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -62279829,
+          "deltaPercent": -68.90123796880185,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 28100364,
+          "savingsRatio": 0.9996511227199578
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7605120,
+        "peakJsHeapHuman": "7.25 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 200 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 200,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "The single most-cited transformers.js example model (used in the official README and most tutorials)."
+    },
+    {
+      "modelId": "minilm-l12",
+      "repo": "Xenova/all-MiniLM-L12-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 8434,
+        "warmLoadToFirstInferenceMs": 283
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39158686,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912393,
+          "model-cdn": 34236486,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93931314,
+          "deltaPercent": -70.57728905252085,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39148879,
+          "savingsRatio": 0.9997495574800441
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7427252,
+        "peakJsHeapHuman": "7.08 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Deeper sibling of MiniLM-L6; common upgrade pick for embedding quality."
+    },
+    {
+      "modelId": "minilm-l12",
+      "repo": "Xenova/all-MiniLM-L12-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 9138,
+        "warmLoadToFirstInferenceMs": 1519
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39158464,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 34236246,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93931536,
+          "deltaPercent": -70.57745585693891,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39148657,
+          "savingsRatio": 0.9997495560602173
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 8376676,
+        "peakJsHeapHuman": "7.99 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 380 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 380,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Deeper sibling of MiniLM-L6; common upgrade pick for embedding quality."
+    },
+    {
+      "modelId": "bge-small",
+      "repo": "Xenova/bge-small-en-v1.5",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 8266,
+        "warmLoadToFirstInferenceMs": 286
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39158192,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 34235974,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93931808,
+          "deltaPercent": -70.5776602299196,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39148385,
+          "savingsRatio": 0.9997495543205877
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7192804,
+        "peakJsHeapHuman": "6.86 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "BAAI general embedding model; MTEB-leaderboard staple, widely recommended for RAG."
+    },
+    {
+      "modelId": "bge-small",
+      "repo": "Xenova/bge-small-en-v1.5",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 9294,
+        "warmLoadToFirstInferenceMs": 1424
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39158100,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912420,
+          "model-cdn": 34235873,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93931900,
+          "deltaPercent": -70.57772935607484,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39148293,
+          "savingsRatio": 0.999749553732178
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 8128448,
+        "peakJsHeapHuman": "7.75 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 380 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 380,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "BAAI general embedding model; MTEB-leaderboard staple, widely recommended for RAG."
+    },
+    {
+      "modelId": "gte-small",
+      "repo": "Xenova/gte-small",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 9248,
+        "warmLoadToFirstInferenceMs": 281
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39159057,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 34236839,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93930943,
+          "deltaPercent": -70.57701029378616,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39149250,
+          "savingsRatio": 0.9997495598527819
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7427896,
+        "peakJsHeapHuman": "7.08 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Alibaba general text embedding; same architecture shape as bge-small (both MiniLM-family sized)."
+    },
+    {
+      "modelId": "gte-small",
+      "repo": "Xenova/gte-small",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 9836,
+        "warmLoadToFirstInferenceMs": 1424
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 39158940,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "37.34 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 34236722,
+          "other": 0
+        },
+        "advertisedBytes": 133090000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 133.09MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -93931060,
+          "deltaPercent": -70.57709820422271,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 39149133,
+          "savingsRatio": 0.999749559104511
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 8363656,
+        "peakJsHeapHuman": "7.98 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 380 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 380,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Alibaba general text embedding; same architecture shape as bge-small (both MiniLM-family sized)."
+    },
+    {
+      "modelId": "distilbert-sst2",
+      "repo": "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
+      "task": "sentiment-analysis",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 14522,
+        "warmLoadToFirstInferenceMs": 277
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 72743893,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "69.37 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 67821675,
+          "other": 0
+        },
+        "advertisedBytes": 267960000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 267.96MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -195216107,
+          "deltaPercent": -72.85270450813555,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 72734086,
+          "savingsRatio": 0.9998651845592041
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 6688980,
+        "peakJsHeapHuman": "6.38 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "The transformers.js README's own sentiment-analysis example model."
+    },
+    {
+      "modelId": "distilbert-sst2",
+      "repo": "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
+      "task": "sentiment-analysis",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 15266,
+        "warmLoadToFirstInferenceMs": 821
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 72743888,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "69.37 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912429,
+          "model-cdn": 67821652,
+          "other": 0
+        },
+        "advertisedBytes": 267960000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 267.96MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -195216112,
+          "deltaPercent": -72.85270637408568,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 72734081,
+          "savingsRatio": 0.9998651845499377
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7635736,
+        "peakJsHeapHuman": "7.28 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 213 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 213,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "The transformers.js README's own sentiment-analysis example model."
+    },
+    {
+      "modelId": "albert-base-v2",
+      "repo": "Xenova/albert-base-v2",
+      "task": "feature-extraction",
+      "dtype": "uint8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 4935,
+        "warmLoadToFirstInferenceMs": 315
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 17249977,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "16.45 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912393,
+          "model-cdn": 12327777,
+          "other": 0
+        },
+        "advertisedBytes": 45270000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 45.27MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -28020023,
+          "deltaPercent": -61.89534570355644,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 17240170,
+          "savingsRatio": 0.9994314775028396
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 19422980,
+        "peakJsHeapHuman": "18.52 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Deliberately uses dtype uint8 (11.76MB) instead of the default \"q8\" quantized file, because for this repo onnx/model_quantized.onnx (40.22MB) is nearly 4x LARGER than onnx/model_uint8.onnx (11.76MB) for the same nominal \"quantized\" concept — a shippability trap in its own right, reported as a finding."
+    },
+    {
+      "modelId": "albert-base-v2",
+      "repo": "Xenova/albert-base-v2",
+      "task": "feature-extraction",
+      "dtype": "uint8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 4988,
+        "warmLoadToFirstInferenceMs": 868
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 17249782,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "16.45 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 12327564,
+          "other": 0
+        },
+        "advertisedBytes": 45270000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 45.27MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -28020218,
+          "deltaPercent": -61.89577645239673,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 17239975,
+          "savingsRatio": 0.9994314710759823
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 17996976,
+        "peakJsHeapHuman": "17.16 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 220 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 220,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Deliberately uses dtype uint8 (11.76MB) instead of the default \"q8\" quantized file, because for this repo onnx/model_quantized.onnx (40.22MB) is nearly 4x LARGER than onnx/model_uint8.onnx (11.76MB) for the same nominal \"quantized\" concept — a shippability trap in its own right, reported as a finding."
+    },
+    {
+      "modelId": "bert-base-ner",
+      "repo": "Xenova/bert-base-NER",
+      "task": "token-classification",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 21466,
+        "warmLoadToFirstInferenceMs": 689
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 114132242,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "108.84 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 109210024,
+          "other": 0
+        },
+        "advertisedBytes": 431170000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 431.17MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -317037758,
+          "deltaPercent": -73.52964213651228,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 114122435,
+          "savingsRatio": 0.9999140733606197
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7099188,
+        "peakJsHeapHuman": "6.77 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Full BERT-base backbone; the largest of the four encoder-classification rows (right at the ~150MB per-model ceiling)."
+    },
+    {
+      "modelId": "bert-base-ner",
+      "repo": "Xenova/bert-base-NER",
+      "task": "token-classification",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 23868,
+        "warmLoadToFirstInferenceMs": 1864
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 114132197,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "108.84 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912420,
+          "model-cdn": 109209970,
+          "other": 0
+        },
+        "advertisedBytes": 431170000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 431.17MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -317037803,
+          "deltaPercent": -73.52965257323098,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 114122390,
+          "savingsRatio": 0.9999140733267405
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 7652932,
+        "peakJsHeapHuman": "7.30 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 385 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 385,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Full BERT-base backbone; the largest of the four encoder-classification rows (right at the ~150MB per-model ceiling)."
+    },
+    {
+      "modelId": "paraphrase-multilingual-minilm-l12",
+      "repo": "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 31789,
+        "warmLoadToFirstInferenceMs": 1223
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 140393578,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "133.89 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 135471360,
+          "other": 0
+        },
+        "advertisedBytes": 470270000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 470.27MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -329876422,
+          "deltaPercent": -70.14617602653794,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 140383771,
+          "savingsRatio": 0.9999301463774931
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 94058600,
+        "peakJsHeapHuman": "89.70 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Cross-check row: this exact model was measured by the showcase-program P7 model card at \"140.38MB, ~24.25s cold load\" (see showcase-program/SELECTION-2.md, 2026-08-09). Re-measuring it here is a deliberate internal-consistency check on this harness, not a coincidence."
+    },
+    {
+      "modelId": "paraphrase-multilingual-minilm-l12",
+      "repo": "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+      "task": "feature-extraction",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 28907,
+        "warmLoadToFirstInferenceMs": 1536
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 140393858,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "133.89 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912384,
+          "model-cdn": 135471667,
+          "other": 0
+        },
+        "advertisedBytes": 470270000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 470.27MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -329876142,
+          "deltaPercent": -70.14611648627384,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 140384051,
+          "savingsRatio": 0.9999301465168084
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 91415536,
+        "peakJsHeapHuman": "87.18 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 380 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 380,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Cross-check row: this exact model was measured by the showcase-program P7 model card at \"140.38MB, ~24.25s cold load\" (see showcase-program/SELECTION-2.md, 2026-08-09). Re-measuring it here is a deliberate internal-consistency check on this harness, not a coincidence."
+    },
+    {
+      "modelId": "lamini-flan-t5-77m",
+      "repo": "Xenova/LaMini-Flan-T5-77M",
+      "task": "text2text-generation",
+      "dtype": "q8",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 19596,
+        "warmLoadToFirstInferenceMs": 670
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 100679942,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "96.02 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 95757724,
+          "other": 0
+        },
+        "advertisedBytes": 232780000,
+        "advertisedSource": "HF tree API onnx/decoder_model_merged.onnx (fp32) = 232.78MB (largest single fp32 component).",
+        "deltaVsAdvertised": {
+          "deltaBytes": -132100058,
+          "deltaPercent": -56.74888650227683,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 100670135,
+          "savingsRatio": 0.9999025923157564
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 19387016,
+        "peakJsHeapHuman": "18.49 MB"
+      },
+      "provider": {
+        "actualProvider": "wasm",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "wasm was requested and zero GPU queue submissions were observed, as expected.",
+        "gpuSubmitCount": 0,
+        "gpuAdapterAvailable": false
+      },
+      "notes": "Seq2seq generation loads TWO onnx graphs (encoder_model + decoder_model_merged); advertisedBytes and measured bytes both reflect that two-file reality."
+    },
+    {
+      "modelId": "lamini-flan-t5-77m",
+      "repo": "Xenova/LaMini-Flan-T5-77M",
+      "task": "text2text-generation",
+      "dtype": "q8",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 21039,
+        "warmLoadToFirstInferenceMs": 2904
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 100679496,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "96.02 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 95757278,
+          "other": 0
+        },
+        "advertisedBytes": 232780000,
+        "advertisedSource": "HF tree API onnx/decoder_model_merged.onnx (fp32) = 232.78MB (largest single fp32 component).",
+        "deltaVsAdvertised": {
+          "deltaBytes": -132100504,
+          "deltaPercent": -56.74907809949309,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 100669689,
+          "savingsRatio": 0.9999025918842502
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 19658896,
+        "peakJsHeapHuman": "18.75 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 1120 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 1120,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Seq2seq generation loads TWO onnx graphs (encoder_model + decoder_model_merged); advertisedBytes and measured bytes both reflect that two-file reality."
+    },
+    {
+      "modelId": "distilgpt2",
+      "repo": "Xenova/distilgpt2",
+      "task": "text-generation",
+      "dtype": "fp16",
+      "device": "wasm",
+      "browserMode": "headless",
+      "status": "failed",
+      "error": "Can't create a session. ERROR_CODE: 1, ERROR_MESSAGE: /mnt/vss/_work/1/s/onnxruntime/core/graph/graph_utils.cc:30 int onnxruntime::graph_utils::GetIndexFromName(const Node &, const std::string &, bool) itr != node_args.end() was false. Attempting to get index by a name which does not exist:InsertedPrecisionFreeCast_/transformer/h.0/ln_1/Constant_output_0for node: /transformer/h.0/ln_1/Mul/SimplifiedLayerNormFusion/\n",
+      "notes": "Deliberately uses dtype fp16 (164.00MB) instead of \"q8\"/int8/uint8, because for this repo the quantized/int8/uint8 files (~236-238MB) are all LARGER than fp16 (164.00MB) — quantization made the artifact bigger, not smaller. Reported as a finding, not swept under the rug; this is the one row over the 150MB per-model preference, kept on purpose."
+    },
+    {
+      "modelId": "distilgpt2",
+      "repo": "Xenova/distilgpt2",
+      "task": "text-generation",
+      "dtype": "fp16",
+      "device": "webgpu",
+      "browserMode": "headed",
+      "status": "ok",
+      "timing": {
+        "coldLoadToFirstInferenceMs": 32552,
+        "warmLoadToFirstInferenceMs": 1494
+      },
+      "bytes": {
+        "coldTotalTransferBytes": 169636624,
+        "warmTotalTransferBytes": 9807,
+        "coldTotalTransferHuman": "161.78 MB",
+        "byOrigin": {
+          "local": 9807,
+          "runtime-cdn": 4912411,
+          "model-cdn": 164714406,
+          "other": 0
+        },
+        "advertisedBytes": 327830000,
+        "advertisedSource": "HF tree API onnx/model.onnx (fp32) = 327.83MB.",
+        "deltaVsAdvertised": {
+          "deltaBytes": -158193376,
+          "deltaPercent": -48.25469786169661,
+          "measuredIsSmaller": true
+        },
+        "revisit": {
+          "cacheHonored": true,
+          "bytesSaved": 169626817,
+          "savingsRatio": 0.9999421881916254
+        }
+      },
+      "heap": {
+        "peakJsHeapBytes": 17790804,
+        "peakJsHeapHuman": "16.97 MB"
+      },
+      "provider": {
+        "actualProvider": "webgpu",
+        "fallbackDetected": false,
+        "confidence": "high",
+        "reasoning": "GPUQueue.submit() was called 625 time(s) during inference — genuine GPU command-buffer dispatch observed, read back from the WebGPU runtime itself, not inferred from config.",
+        "gpuSubmitCount": 625,
+        "gpuAdapterAvailable": true
+      },
+      "notes": "Deliberately uses dtype fp16 (164.00MB) instead of \"q8\"/int8/uint8, because for this repo the quantized/int8/uint8 files (~236-238MB) are all LARGER than fp16 (164.00MB) — quantization made the artifact bigger, not smaller. Reported as a finding, not swept under the rug; this is the one row over the 150MB per-model preference, kept on purpose."
+    }
+  ]
+}

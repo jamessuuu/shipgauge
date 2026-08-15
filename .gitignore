@@ -1,0 +1,9 @@
+node_modules/
+.tmp/
+*.log
+npm-debug.log*
+playwright-report/
+test-results/
+.playwright-cache/
+.impeccable/
+results/.progress.json

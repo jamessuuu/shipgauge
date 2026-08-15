@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>shipgauge harness</title>
+</head>
+<body>
+<pre id="status">booting…</pre>
+<script type="module">
+  import { parseRunConfig, runProfile } from './lib/instrument.js';
+
+  const statusEl = document.getElementById('status');
+  const log = (msg) => { statusEl.textContent = msg; };
+
+  // window.__shipgaugeResult stays null until the run finishes; the
+  // orchestrator (scripts/measure.mjs) polls for it via page.evaluate().
+  window.__shipgaugeResult = null;
+  window.__shipgaugeError = null;
+
+  try {
+    const config = parseRunConfig(location.search);
+    const result = await runProfile(config, log);
+    // Reported via BOTH a global (machine-readable for Playwright) and a
+    // single marker-prefixed console.log line (readable by anyone who
+    // opens devtools by hand, matching "reports the profile via console/JSON").
+    window.__shipgaugeResult = result;
+    console.log('SHIPGAUGE_RESULT:' + JSON.stringify(result));
+    log(result.ok ? 'done: ' + JSON.stringify(result, null, 2) : 'FAILED: ' + result.error);
+  } catch (err) {
+    window.__shipgaugeError = err?.message ?? String(err);
+    console.log('SHIPGAUGE_RESULT:' + JSON.stringify({ ok: false, error: window.__shipgaugeError }));
+    log('FAILED (setup): ' + window.__shipgaugeError);
+  }
+</script>
+</body>
+</html>

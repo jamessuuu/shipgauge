@@ -1,0 +1,17 @@
+{
+  "name": "shipgauge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-ML shippability study: a reproduction harness that measures true transfer bytes, cold-load time, execution-provider readback (webgpu vs wasm, not trusted config), peak JS heap, and revisit/cache behaviour for popular transformers.js model configurations.",
+  "scripts": {
+    "test": "vitest run",
+    "measure": "node scripts/measure.mjs",
+    "server": "node scripts/local-server.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "vitest": "^3.2.4"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>shipgauge self-test</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12; --panel: #12151c; --line: #232838; --text: #e6e9f2; --dim: #8b93a7;
+    --accent: #5eb3ff; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    padding: 2rem 1.25rem 4rem;
+  }
+  main { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+  .sub { color: var(--dim); margin: 0 0 1.75rem; font-size: 0.92rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--warn); color: var(--warn);
+    border-radius: 3px; padding: 0.05rem 0.4rem; font-size: 0.75rem; margin-right: 0.5rem;
+  }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem; margin: 0 0 1.25rem; }
+  legend { color: var(--dim); font-size: 0.8rem; padding: 0 0.4rem; }
+  label { display: block; margin: 0.5rem 0; font-size: 0.92rem; }
+  select, button {
+    font: inherit; background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem 0.6rem;
+  }
+  select { width: 100%; margin-top: 0.3rem; }
+  button {
+    cursor: pointer; margin-top: 0.6rem; margin-right: 0.5rem;
+    border-color: var(--accent); color: var(--accent);
+  }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:hover:not(:disabled) { background: #16203a; }
+  .status { color: var(--dim); font-size: 0.85rem; min-height: 1.4em; margin: 0.6rem 0; white-space: pre-wrap; }
+  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.88rem; }
+  td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { color: var(--dim); width: 40%; white-space: nowrap; }
+  .ok { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .panel { border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem; margin-top: 1rem; display: none; }
+  footer { color: var(--dim); font-size: 0.8rem; margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  a { color: var(--accent); }
+  code { color: #c9d6f5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>shipgauge — run the shippability profile on YOUR machine</h1>
+  <p class="sub">
+    <span class="badge">n = 1</span>
+    This page runs the exact same instrumentation as the repo's reproducible
+    harness (<code>scripts/measure.mjs</code>), in your browser, on your
+    hardware. One run here is one data point on one machine — not a
+    population claim. See <a href="../README.md">README</a> for the full
+    method and the multi-model results this repo already measured.
+  </p>
+
+  <fieldset>
+    <legend>configure a row</legend>
+    <label>model
+      <select id="model"></select>
+    </label>
+    <label>device
+      <select id="device">
+        <option value="wasm">wasm</option>
+        <option value="webgpu">webgpu</option>
+      </select>
+    </label>
+    <button id="run">run cold test</button>
+    <button id="rerun" disabled title="reuses this tab's cache — tests whether bytes are honoured on revisit">run again (test cache)</button>
+  </fieldset>
+
+  <div class="status" id="status">idle.</div>
+
+  <div class="panel" id="result">
+    <table id="resultTable"></table>
+  </div>
+
+  <div class="panel" id="machine">
+    <table id="machineTable"></table>
+  </div>
+
+  <footer>
+    Method notes: byte counts here use the public Resource&nbsp;Timing API,
+    not Chrome DevTools Protocol. Confirmed live against huggingface.co
+    (2026-08-15): it sends no <code>Timing-Allow-Origin</code>, so the browser
+    zeroes out <em>both</em> <code>transferSize</code> and
+    <code>decodedBodySize</code> for those cross-origin requests — not just
+    the transfer size, as you might expect. When a request's real duration
+    proves bytes moved but both size fields read zero, this page reports it
+    as <span class="warn">size unknown (opaque)</span> and excludes it from
+    the byte total rather than counting it as zero or guessing — the number
+    shown is a floor, not the true total, whenever that warning appears. The
+    repo's own results (<code>results/results.json</code>) were measured via
+    CDP, which sees every byte regardless of CORS/TAO headers — treat that as
+    authoritative over this page for exact figures. Execution-provider
+    readback does not have this limitation: it works identically here and in
+    the harness, counting real <code>GPUQueue.submit()</code> calls rather
+    than trusting the device string you asked for.
+  </footer>
+</main>
+
+<script type="module">
+  import { MODELS } from '../scripts/lib/models.mjs';
+  import { runProfile } from '../pages/lib/instrument.js';
+  import { summarizeNetworkBytes, formatBytes, compareToAdvertised, evaluateRevisit } from '../scripts/lib/bytes.mjs';
+  import { buildNetworkRecordsFromResourceTiming } from '../scripts/lib/resource-timing.mjs';
+
+  const modelSelect = document.getElementById('model');
+  const deviceSelect = document.getElementById('device');
+  const runBtn = document.getElementById('run');
+  const rerunBtn = document.getElementById('rerun');
+  const statusEl = document.getElementById('status');
+  const resultPanel = document.getElementById('result');
+  const resultTable = document.getElementById('resultTable');
+  const machinePanel = document.getElementById('machine');
+  const machineTable = document.getElementById('machineTable');
+
+  for (const m of MODELS) {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = `${m.id}  (${m.repo}, ${m.task}, dtype=${m.dtype})`;
+    modelSelect.appendChild(opt);
+  }
+
+  const setStatus = (msg) => { statusEl.textContent = msg; };
+
+  let coldBytesForRevisit = null;
+
+  function row(label, valueHtml) {
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td');
+    td1.textContent = label;
+    const td2 = document.createElement('td');
+    td2.innerHTML = valueHtml;
+    tr.append(td1, td2);
+    return tr;
+  }
+
+  async function measureCurrentPage(sinceStartTime) {
+    const entries = performance.getEntriesByType('resource');
+    const { records, approximateCount, opaqueCount } = buildNetworkRecordsFromResourceTiming(entries, sinceStartTime);
+    const summary = summarizeNetworkBytes(records);
+    return { summary, approximateCount, opaqueCount };
+  }
+
+  async function runOnce(isRerun) {
+    runBtn.disabled = true;
+    rerunBtn.disabled = true;
+    resultPanel.style.display = 'none';
+
+    const model = MODELS.find((m) => m.id === modelSelect.value);
+    const device = deviceSelect.value;
+    const t0 = performance.now();
+
+    const profile = await runProfile(
+      { repo: model.repo, task: model.task, dtype: model.dtype, device, input: model.sampleInput, callOptions: model.callOptions ?? {} },
+      setStatus,
+    );
+
+    const { summary, approximateCount, opaqueCount } = await measureCurrentPage(t0);
+
+    resultTable.innerHTML = '';
+    resultTable.appendChild(row('model', `${model.id} <span style="color:var(--dim)">(${model.repo})</span>`));
+    resultTable.appendChild(row('device requested', device));
+
+    if (!profile.ok) {
+      resultTable.appendChild(row('status', `<span class="bad">FAILED — ${profile.error}</span>`));
+      resultPanel.style.display = 'block';
+      setStatus('failed — see table below.');
+      runBtn.disabled = false;
+      return;
+    }
+
+    const providerLabel = profile.gpuAdapterAvailable
+      ? (profile.gpuSubmitCount > 0 ? 'webgpu (GPUQueue.submit observed)' : (device === 'webgpu' ? 'wasm-silent-fallback ⚠️' : 'wasm (as expected)'))
+      : (device === 'webgpu' ? 'unavailable (no GPU adapter) ⚠️' : 'wasm (as expected)');
+    const providerClass = providerLabel.includes('⚠️') ? 'bad' : 'ok';
+
+    resultTable.appendChild(row(isRerun ? 'load time (warm)' : 'load time (cold)', `${Math.round(profile.elapsedMs)} ms`));
+    resultTable.appendChild(row('bytes transferred (measurable)', `${formatBytes(summary.totalTransferBytes)}${approximateCount ? ` <span class="warn">(${approximateCount} approximate)</span>` : ''}`));
+    resultTable.appendChild(row('  └ runtime-cdn', formatBytes(summary.byOrigin['runtime-cdn'] ?? 0)));
+    resultTable.appendChild(row('  └ model-cdn', `${formatBytes(summary.byOrigin['model-cdn'] ?? 0)}${opaqueCount ? ' <span class="warn">(see note below)</span>' : ''}`));
+    resultTable.appendChild(row('  └ served from cache', `${summary.cachedCount} request(s)`));
+    if (opaqueCount > 0) {
+      resultTable.appendChild(row('⚠ size unknown (opaque)', `<span class="warn">${opaqueCount} request(s)</span> transferred real bytes over a real connection (confirmed by duration) but exposed <code>0</code> for both transferSize and decodedBodySize — almost certainly the model weight file(s) from huggingface.co, which does not send <code>Timing-Allow-Origin</code>. <strong>The figure above does NOT include these bytes</strong> — it is a floor, not the true total. This is a real limitation of the public Resource&nbsp;Timing API from a third-party page, not a bug in this page. The repo's own <code>results/results.json</code> was measured via Chrome DevTools Protocol, which has no such blind spot — treat it as authoritative over this self-test for exact numbers.`));
+    }
+    resultTable.appendChild(row('execution provider (readback)', `<span class="${providerClass}">${providerLabel}</span>`));
+    resultTable.appendChild(row('GPUQueue.submit() calls', String(profile.gpuSubmitCount)));
+    resultTable.appendChild(row('peak JS heap (approx, performance.memory)', profile.heapSamplingSupported ? formatBytes(profile.peakJsHeapBytes) : 'not supported in this browser'));
+    resultTable.appendChild(row('output shape (sanity check)', profile.outputShape ?? 'n/a'));
+
+    if (model.advertisedBytes) {
+      const cmp = compareToAdvertised(summary.totalTransferBytes, model.advertisedBytes);
+      resultTable.appendChild(row('vs advertised (fp32 reference)', `${formatBytes(model.advertisedBytes)} advertised &rarr; ${cmp.deltaPercent >= 0 ? '+' : ''}${cmp.deltaPercent.toFixed(1)}%${opaqueCount ? ' <span class="warn">(measured side is a floor — see opaque note above)</span>' : ''}`));
+    }
+
+    if (!isRerun) {
+      coldBytesForRevisit = summary.totalTransferBytes;
+      rerunBtn.disabled = false;
+    } else if (coldBytesForRevisit != null) {
+      const revisit = evaluateRevisit(coldBytesForRevisit, summary.totalTransferBytes);
+      resultTable.appendChild(row('cache honoured on revisit?', revisit.cacheHonored
+        ? `<span class="ok">yes</span> (saved ${formatBytes(revisit.bytesSaved)}, ${(revisit.savingsRatio * 100).toFixed(0)}%)`
+        : `<span class="bad">NO</span> — re-downloaded ${formatBytes(summary.totalTransferBytes)} again`));
+    }
+
+    if (profile.gpuAdapterInfo && (profile.gpuAdapterInfo.vendor || profile.gpuAdapterInfo.description)) {
+      machineTable.innerHTML = '';
+      machineTable.appendChild(row('GPU vendor', profile.gpuAdapterInfo.vendor ?? 'n/a'));
+      machineTable.appendChild(row('GPU architecture', profile.gpuAdapterInfo.architecture ?? 'n/a'));
+      machineTable.appendChild(row('GPU description', profile.gpuAdapterInfo.description || '(redacted by browser — description/device are hidden unless the browser is launched with developer flags; this is normal in an ordinary browser tab)'));
+      machinePanel.style.display = 'block';
+    }
+
+    resultPanel.style.display = 'block';
+    setStatus(isRerun ? 'revisit test complete.' : 'cold test complete. click "run again" to test cache behaviour.');
+    runBtn.disabled = false;
+  }
+
+  runBtn.addEventListener('click', () => {
+    coldBytesForRevisit = null;
+    rerunBtn.disabled = true;
+    runOnce(false).catch((e) => setStatus('unexpected error: ' + e.message));
+  });
+  rerunBtn.addEventListener('click', () => {
+    runOnce(true).catch((e) => setStatus('unexpected error: ' + e.message));
+  });
+</script>
+</body>
+</html>
