@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Unit-test harness only (scripts/test/**/*.test.mjs via vitest —
+      # byte accounting, provider-readback verdicts, results assembly,
+      # resource-timing parsing). Deliberately NOT running the Playwright
+      # measurement suite (`npm run measure`) here: per README.md and
+      # scripts/measure.mjs's own header, WebGPU is unreliable/unavailable
+      # in headless Chromium, so webgpu rows must run headed against real
+      # GPU hardware to mean anything — that's this study's documented
+      # method, not something a hosted CI runner can substitute for. This
+      # job proves the harness logic is correct; it does not (and cannot)
+      # reproduce the study's actual hardware measurements.
+      - name: Unit tests
+        run: npm test
