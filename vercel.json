@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "echo 'shipgauge: no build — site/ is served as-is'",
+  "installCommand": "echo 'shipgauge: no install needed for static site'",
+  "outputDirectory": "site"
+}
