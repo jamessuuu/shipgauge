@@ -238,5 +238,7 @@ results/RESULTS.md     generated table view of the same data
 ## Status
 
 Measured, tested, committed. `npm test` — 67/67 green. `npm run measure` —
-20/20 rows attempted, 19 ok, 1 recorded failure, 0 silently skipped. Not yet
-published anywhere; this repo has local commits only.
+20/20 rows attempted, 19 ok, 1 recorded failure, 0 silently skipped. Public at
+https://github.com/jamessuuu/shipgauge (MIT; brand assets excluded, see LICENSE),
+live at https://shipgauge.vercel.app, unit tests run in GitHub Actions on every push.
+`package.json` stays `private: true` on purpose: this is a study, not an npm package.
