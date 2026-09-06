@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest run",
     "measure": "node scripts/measure.mjs",
-    "server": "node scripts/local-server.mjs"
+    "server": "node scripts/local-server.mjs",
+    "build:site": "node scripts/build-site.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

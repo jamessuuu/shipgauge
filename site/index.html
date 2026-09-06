@@ -30,7 +30,15 @@
     font: inherit; background: var(--panel); color: var(--text);
     border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem 0.6rem;
   }
-  select { width: 100%; margin-top: 0.3rem; }
+  select {
+    width: 100%; margin-top: 0.3rem;
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b93a7' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.7rem center; background-size: 0.8rem;
+  }
+  select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  select option { background: var(--panel); color: var(--text); }
   button {
     cursor: pointer; margin-top: 0.6rem; margin-right: 0.5rem;
     border-color: var(--accent); color: var(--accent);
@@ -119,10 +127,10 @@
 </main>
 
 <script type="module">
-  import { MODELS } from '../scripts/lib/models.mjs';
-  import { runProfile } from '../pages/lib/instrument.js';
-  import { summarizeNetworkBytes, formatBytes, compareToAdvertised, evaluateRevisit } from '../scripts/lib/bytes.mjs';
-  import { buildNetworkRecordsFromResourceTiming } from '../scripts/lib/resource-timing.mjs';
+  import { MODELS } from './vendor/scripts/lib/models.mjs';
+  import { runProfile } from './vendor/pages/lib/instrument.js';
+  import { summarizeNetworkBytes, formatBytes, compareToAdvertised, evaluateRevisit } from './vendor/scripts/lib/bytes.mjs';
+  import { buildNetworkRecordsFromResourceTiming } from './vendor/scripts/lib/resource-timing.mjs';
 
   const modelSelect = document.getElementById('model');
   const deviceSelect = document.getElementById('device');
