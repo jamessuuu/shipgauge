@@ -46,6 +46,15 @@
   footer { color: var(--dim); font-size: 0.8rem; margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
   a { color: var(--accent); }
   code { color: #c9d6f5; }
+  /* attribution-kit v1 — the maker's mark inherits color; the pin takes the site's amber */
+  .aj-attribution { margin: 0; font: inherit; line-height: 1.5; color: inherit; }
+  .aj-attribution__mark { display: inline-block; width: 20px; height: 20px; vertical-align: -0.3em; margin-right: 0.45em; }
+  .aj-attribution__mark--full { width: 48px; height: 48px; vertical-align: middle; }
+  .aj-attribution a { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; }
+  .aj-attribution a:hover { text-decoration-thickness: 2px; }
+  .aj-attribution a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .aj-attribution__sep { margin: 0 0.35em; }
+  .aj-attribution { --aj-attribution-signal: #F59E0B; margin-top: 1rem; }
 </style>
 </head>
 <body>
@@ -102,6 +111,10 @@
     readback does not have this limitation: it works identically here and in
     the harness, counting real <code>GPUQueue.submit()</code> calls rather
     than trusting the device string you asked for.
+    <!-- attribution-kit v1 -->
+    <p class="aj-attribution">
+      <svg class="aj-attribution__mark" viewBox="0 0 32 32" width="20" height="20" role="img" aria-label="Agent James"><path fill="currentColor" d="M1 10h3v4H1zM28 10h3v4h-3zM10 1h4v3h-4zM10 28h4v3h-4zM1 18h3v4H1zM28 18h3v4h-3zM18 1h4v3h-4zM18 28h4v3h-4z"/><path fill="currentColor" fill-rule="evenodd" d="M5 4h22a1 1 0 0 1 1 1v22a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM18.3 9h3.4v8a5.7 5.7 0 0 1-5.7 5.7H12v-3.4h4a2.3 2.3 0 0 0 2.3-2.3z"/><rect x="6.5" y="6.5" width="3.5" height="3.5" fill="var(--aj-attribution-signal, #B45309)"/></svg>Built by <a href="https://agentjames.vercel.app" rel="me noopener">James Lorenz Santos</a><span class="aj-attribution__sep" aria-hidden="true">&middot;</span><a href="https://www.linkedin.com/in/james-lorenz-santos-720776251/" rel="me noopener" target="_blank">LinkedIn</a>
+    </p>
   </footer>
 </main>
 
